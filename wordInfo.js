@@ -17,14 +17,22 @@ async function whenSomeKeyPressed(event) {
   }
 }
 
-async function searchForRhymes(query) {
-  const rhymeResults = await fetch(
+function searchForRhymes(query) {
+  const rhymeResults = fetch(
     `https://rhymebrain.com/talk?function=getRhymes&word=${query}`
-  );
-  const rhymeResultsJson = await rhymeResults.json();
-  const truncatedTo10 = rhymeResultsJson.slice(0, 10);
-  console.log(truncatedTo10);
-  return truncatedTo10;
+  ).then(function (responseFromEndpoint) {
+    return responseFromEndpoint.json();
+  })
+  .then(function (rhymeResultsJson) {
+    const truncatedTo10 = rhymeResultsJson.slice(0, 10);
+    console.log(truncatedTo10);
+    return truncatedTo10;
+  })
+  return rhymeResults;
+  // const rhymeResultsJson = await rhymeResults.json();
+  // const truncatedTo10 = rhymeResultsJson.slice(0, 10);
+  // console.log(truncatedTo10);
+  // return truncatedTo10;
 }
 
 async function createRhymeElements(rhymeResultsJson) {
