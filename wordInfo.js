@@ -1,38 +1,85 @@
-const query = "hello";
+// const query = "hello";
 
-function sizeTheWords() {
-  const variableSizeResults = document.querySelectorAll(".result.imperfect");
-  variableSizeResults.forEach((result) => {
-    const resultScore = parseInt(result.dataset.score, 10);
-    result.style.fontSize = `${0.5 + (3.5 * resultScore) / 300}rem`;
-  });
+const searchBoxElem = document.getElementById("query");
+const resultsContainerElem = document.getElementById("results");
+
+// when someone presses enter in the search box,
+searchBoxElem.addEventListener("keydown", whenSomeKeyPressed);
+
+async function whenSomeKeyPressed(event) {
+  
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const rhymes = await searchForRhymes(searchBoxElem.value);
+    const rhymeElements = await createRhymeElements(rhymes);
+    clearResultsElem();
+    populateResultsElem(rhymeElements);
+  }
 }
 
-// assuming you already have rhyme results somewhere, for each of the first 10 results, query the word info api for the rhyming words' info and display them in a dl with that rhyming word
-
-async function begin() {
-  const rhymeResults = await fetch("example-rhyme-results.json");
+async function searchForRhymes(query) {
+  const rhymeResults = await fetch(
+    `https://rhymebrain.com/talk?function=getRhymes&word=${query}`
+  );
   const rhymeResultsJson = await rhymeResults.json();
-  console.log(rhymeResultsJson);
-  const rhymeResultsElems = rhymeResultsJson.map((rhymeWord) => {
-    const resultElem = document.createElement("div");
+  const truncatedTo10 = rhymeResultsJson.slice(0, 10);
+  console.log(truncatedTo10);
+  return truncatedTo10;
+}
+
+async function createRhymeElements(rhymeResultsJson) {
+  const wordInfos = await getWordsInfos(rhymeResultsJson);
+
+  return rhymeResultsJson.map((rhymeWord, i) => {
+    let resultElem = document.createElement("div");
     resultElem.classList.add("result");
-    if (rhymeWord.score >= 300) {
-      resultElem.classList.add("perfect");
-    } else {
-      resultElem.classList.add("imperfect");
-    }
     resultElem.dataset.score = rhymeWord.score;
-    // resultElem.innerText = rhymeWord.word;
     resultElem.append(rhymeWord.word);
+    resultElem.append(createWordInfoElements(wordInfos[i]));
+    resultElem = styleRhymeResult(resultElem);
     return resultElem;
   });
-  const resultsContainer = document.getElementById("results");
-  // console.log(Array.from(resultsContainer.childNodes));
-  Array.from(resultsContainer.childNodes).forEach((child) => {
+}
+
+async function getWordsInfos(rhymes) {
+  const wordsInfos = await Promise.all(
+    rhymes.map(async (rhyme) => {
+      const wordInfo = await fetch(
+        `https://rhymebrain.com/talk?function=getWordInfo&word=${rhyme.word}`
+      );
+      const wordInfoJson = await wordInfo.json();
+      return wordInfoJson;
+    })
+  );
+  return wordsInfos;
+}
+
+function createWordInfoElements(wordInfo) {
+  const wordInfoElem = document.createElement("dl");
+  for (const [key, value] of Object.entries(wordInfo)) {
+    const dt = document.createElement("dt");
+    dt.append(key);
+    const dd = document.createElement("dd");
+    dd.append(value);
+    wordInfoElem.append(dt);
+    wordInfoElem.append(dd);
+  }
+  return wordInfoElem;
+}
+
+function styleRhymeResult(resultElem) {
+  const styledResult = resultElem;
+  const resultScore = parseInt(resultElem.dataset.score, 10);
+  styledResult.style.fontSize = `${0.5 + (3.5 * resultScore) / 300}rem`;
+  return styledResult;
+}
+
+function clearResultsElem() {
+  Array.from(resultsContainerElem.childNodes).forEach((child) => {
     child.remove();
   });
-  resultsContainer.append(...rhymeResultsElems);
-  sizeTheWords();
 }
-begin();
+
+function populateResultsElem(rhymeResultsElems) {
+  resultsContainerElem.append(...rhymeResultsElems);
+}
